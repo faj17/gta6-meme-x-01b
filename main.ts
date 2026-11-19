@@ -5,11 +5,13 @@
 // both in: it copies POST.json and meme.png from beside this file to /output,
 // where the gate reads POST.json and the house writes its dossier of the post.
 // It writes the same bytes on every run: two plain file copies, no clock, no network.
+// After each copy it reads the output back and compares it byte for byte with the
+// source, so a partial or failed copy is reported instead of handed in silently.
 //
 // Run it the way the grader does:
 //   mkdir -p out && MAKEFUN_BOT_DIR=. MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { copyFileSync, mkdirSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const BOT_DIR = process.env.MAKEFUN_BOT_DIR ?? '/bot';
@@ -19,6 +21,12 @@ mkdirSync(OUTPUT_DIR, { recursive: true });
 for (const name of ['POST.json', 'meme.png']) {
   try {
     copyFileSync(join(BOT_DIR, name), join(OUTPUT_DIR, name));
+    const src = readFileSync(join(BOT_DIR, name));
+    const dst = readFileSync(join(OUTPUT_DIR, name));
+    if (!src.equals(dst)) {
+      console.error(`${name} copied to ${OUTPUT_DIR} does not match the source`);
+      process.exit(1);
+    }
   } catch (err) {
     console.error(`${name} could not be copied from ${BOT_DIR}: ${(err as Error).message}`);
     process.exit(1);
